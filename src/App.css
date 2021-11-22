@@ -1,0 +1,308 @@
+/* Styles go here */
+.container {
+  text-align: center;
+  justify-content: center;
+  display: flex;
+  max-width: 1200px;
+  margin: auto;
+}
+
+.container-body{
+  text-align: center;
+  justify-content: center;
+  display: flex;
+  max-width: 1200px;
+  min-height: 75vh;
+  margin: auto;
+}
+
+.container-fluid {
+  text-align: center;
+  justify-content: center;
+  max-width: 1200px;
+  min-height: 75vh;
+  margin: auto;
+}
+
+.navigation {
+  margin-bottom: 10px;
+}
+
+.nav-item {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.nav-item:hover {
+  color: rgb(255, 255, 255);
+}
+
+.active {
+  color: #ffffff;
+}
+
+.myprop, .listings, .buy, .sell {
+  padding: 5px;
+  margin-top: 0px;
+}
+
+.col-2 {
+  flex-basis: 50%;
+  min-width: 600px;
+  margin-top: 25px;
+  margin-left: 0px;
+  align-self: center;
+  align-items: flex-start;
+}
+
+.col-2 img {
+  max-width: 100%;
+  padding: 25px 0;
+}
+
+.btn {
+  transition: background 0.5s;
+  margin-top: 10px;
+}
+
+.btn:hover {
+  background: #27272c;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 500px;
+  justify-content: space-around;
+  margin-left: auto;
+  text-align: center;
+  align-self: flex-end;
+}
+
+.row-btns {
+  margin-left: 100px;
+  min-width: 400px;
+  margin-bottom: 0px;
+  margin-right: 0px;
+}
+
+.row-last {
+  align-self: center;
+  margin-left: 0px;
+  margin-top: 0px;
+  margin-right: 600px;
+}
+
+.row-main {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 500px;
+  justify-content: space-around;
+  margin-left: auto;
+  text-align: center;
+}
+
+.table {
+  text-align: center;
+  align-items: center;
+  align-self: flex-start;
+  margin-top: 30px;
+  margin-bottom: 30px;
+  border-radius: 1em;
+  border-color: #27272c;
+  border-right: #27272c;
+}
+
+.table th {
+  background-color: #27272c;
+  text-align: center;
+  vertical-align: middle;
+  align-items: flex-start;
+  color: whitesmoke;
+  font-size: medium;
+}
+
+p {
+  text-align: center;
+  vertical-align: middle;
+  align-items: flex-start;
+}
+
+td {
+  text-align: center;
+  vertical-align: middle;
+  align-items: flex-start;
+}
+
+.myprop, .listings, .buy, .sell {
+  text-align: center;
+  min-width: 800px;
+  display: flex;
+  flex-wrap: wrap;
+  flex-basis: 80%;
+  align-items: center;
+  vertical-align: center;
+  align-self: flex-start;
+  align-content: center;
+  padding: 5%;
+}
+
+.form-offer {
+  margin: 5px;
+  border-radius: 7px;
+  border-color: #000000;
+  text-align: center;
+}
+
+.subtitle {
+  text-align: center;
+  min-width: 800px;
+  margin-top: 25px;
+}
+
+.subtitle1, .subtitle2 {
+  text-align: center;
+  margin-top: 20px;
+  margin-bottom: 20px
+}
+
+hr {
+  margin-bottom: 50px;
+  margin-top: 50px;
+}
+
+h1 {
+  font-weight: bold;
+  text-align: center;
+}
+
+h2 {
+  font-weight: bold;
+  text-align: center;
+}
+
+h3 {
+  font-weight: bold;
+  text-align: center;
+}
+
+h4 {
+  font-weight: bold;
+  text-align: center;
+  margin-top: 5px;
+  margin-bottom: 0px;
+}
+
+h5 {
+  font-weight: bold;
+  text-align: center;
+  margin-top: 10px;
+  margin-bottom: 5px;
+}
+
+small {
+  font-style: italic;
+  text-align: center;
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+.img-thumbnail {
+  margin-top: 10px;
+}
+
+.btn {
+  vertical-align: middle;
+  align-self: center;
+  margin-bottom: 10px;
+  margin-left: 10px;
+}
+
+.box-black {
+  width: 100%;
+  background-color: #27272c;
+  margin-left: 0;
+  padding: 1px;
+  margin-top: 10px;
+}
+
+.col-sm {
+  padding: 0%;
+  margin-top: 30px;
+  min-width: 200px;
+}
+
+/*------------footer-------------*/
+
+.footer {
+  display: flex;
+  background: rgb(31, 30, 30);
+  color: #8a8a8a;
+  font-size: 12px;
+  padding: 20px 0 10px;
+  margin-top: auto;
+  text-align: center;
+  justify-content: center;
+}
+
+.footer p {
+  color: #8a8a8a;
+}
+
+.footer h5 {
+  color: #8a8a8a;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.footer-col-1, .footer-col-2, .footer-col-3 {
+  min-width: 450px;
+  margin-bottom: 5px;
+}
+
+.footer-col-1 {
+  flex-basis: 30%;
+}
+
+.footer-col-2 {
+  flex: 1;
+  text-align: center;
+}
+
+.footer-col-3 img {
+  width: 200px;
+  margin-bottom: 0px;
+  margin-top: 0px;
+}
+
+.footer-col-1, .footer-col-3 {
+  flex-basis: 10%;
+  text-align: center;
+}
+
+ul {
+  list-style-type: none;
+  color: #8a8a8a;
+  text-align: center;
+}
+
+.app-logo {
+  margin-top: 20px;
+}
+
+.app-logo img {
+  width: 100px;
+}
+
+.footer hr {
+  border: none;
+  background: #b5b5b5;
+  height: 1px;
+  margin: 20px 0;
+}
+
+.copyright {
+  text-align: center;
+}
