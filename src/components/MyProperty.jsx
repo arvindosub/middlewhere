@@ -37,19 +37,39 @@ class MyProperty extends Component {
                 <th scope="col">Title</th>
                 <th scope="col">Value</th>
                 <th scope="col">Description</th>
+                <th scope="col">Stake (%)</th>
                 <th scope="col">Status</th>
               </tr>
             </thead>
             <tbody id="propList">
-              { this.props.property.map((property, key) => {
-                if (property.propOwner === this.props.account) {
+              { this.props.escrows.map((escrow, key) => {
+                var value = 0
+                var perc = 0
+                var sale = 0
+                var title = ''
+                var description = ''
+                var pid = 0
+                var imgurl = ''
+                if (escrow.stakeOwner === this.props.account) {
+                  var value = escrow.value
+                  var perc = escrow.percentage
+                  var sale = escrow.salePercent
+                  this.props.property.map((property, ind) => {
+                    if (escrow.propID == property.propID) {
+                      title = property.propTitle
+                      description = property.propDescription
+                      pid = property.propID
+                      imgurl = property.imgURL
+                    }
+                  })
                   return (
-                    <tr key={key}>
-                      <th scope="row">{property.propID.toString()}</th>
-                      <td style={{ textAlign: 'left' }}><img src={property.imgURL} className="img-thumbnail" style={{ maxWidth: '100px', marginRight: "30px", marginLeft: "0px", marginTop: "0px" }} />{property.propTitle}</td>
-                      <td>${window.web3.utils.fromWei(property.propValue.toString(), 'Ether')*this.props.ethToDollars}</td>
-                      <td>{property.propDescription}</td>
-                      <td>{property.pendingSale ? 'On Sale' : '' }</td>
+                    <tr key={pid}>
+                      <th scope="row">{pid.toString()}</th>
+                      <td style={{ textAlign: 'left' }}><img src={imgurl} className="img-thumbnail" style={{ maxWidth: '100px', marginRight: "30px", marginLeft: "0px", marginTop: "0px" }} />{title}</td>
+                      <td>${window.web3.utils.fromWei(value.toString(), 'Ether')*this.props.ethToDollars}</td>
+                      <td>{description}</td>
+                      <td>{perc.toString()}</td>
+                      <td>{sale > 0 ? 'On Sale: ' + sale.toString() + '%' : 'Not For Sale' }</td>
                     </tr>
                   )
                 }
@@ -74,10 +94,11 @@ class MyProperty extends Component {
                     }
                     const title = this.tit.value
                     const address = this.add.value
+                    const percentage = parseInt(this.perc.value)
                     let ethValue = this.val.value / this.props.ethToDollars
                     const value = window.web3.utils.toWei(ethValue.toString(), 'Ether')
                     const description = this.desc.value
-                    this.props.addProperty(title, address, description, value, imgURL)
+                    this.props.addProperty(title, address, description, percentage, value, imgURL)
                   }}>
                   <div className="form-group mr-sm-2">
                     <input
@@ -112,9 +133,18 @@ class MyProperty extends Component {
                     <input
                       id="val"
                       type="text"
+                      ref={(input) => { this.perc = input }}
+                      className="form-control"
+                      placeholder="Stake Percentage (%)"
+                      required />
+                  </div>
+                  <div className="form-group mr-sm-2">
+                    <input
+                      id="val"
+                      type="text"
                       ref={(input) => { this.val = input }}
                       className="form-control"
-                      placeholder="Value"
+                      placeholder="Stake Value (S$)"
                       required />
                   </div>
                   <div className="form-group mr-sm-2">
@@ -141,38 +171,44 @@ class MyProperty extends Component {
               <Modal.Body>
                 <form onSubmit={async (event) => {
                   event.preventDefault()
-                  var id = this.pID.value - 1
+                  var pid = this.pID.value-1
+                  var idx = 0
+                  this.props.escrows.map((escrow, index) => {
+                    if (escrow.propID == pid+1 && escrow.stakeOwner == this.props.account) {
+                      idx = index
+                    }
+                  })
                   const rbs = document.querySelectorAll('input[name="choice"]');
-                  var pendSale = this.props.property[id].pendingSale
+                  var salePercent = this.props.escrows[idx].salePercent
                   for (const rb of rbs) {
                     if (rb.checked) {
                       if (rb.value == "yes") {
-                        pendSale = true
-                      } else {
-                        pendSale = false
+                        salePercent = this.pPerc.value
+                      } else if (rb.value == "no") {
+                        salePercent = 0
                       }
                       break;
                     }
                   }
                   var newTitle = this.pTitle.value
                   if (this.pTitle.value === null || this.pTitle.value === '') {
-                    newTitle = this.props.property[id].propTitle
+                    newTitle = this.props.property[pid].propTitle
                   }
                   var newValue = window.web3.utils.toWei((this.pValue.value/this.props.ethToDollars).toString(), 'Ether')
                   if (this.pValue.value === null || this.pValue.value === '') {
-                    newValue = this.props.property[id].propValue
+                    newValue = this.props.escrows[idx].value
                   }
                   var newDesc = this.pDesc.value
                   if (this.pDesc.value === null || this.pDesc.value === '') {
-                    newDesc = this.props.property[id].propDescription
+                    newDesc = this.props.property[pid].propDescription
                   }
-                  var newImg = this.props.property[id].imgURL
+                  var newImg = this.props.property[pid].imgURL
                   if (this.state.imgChg === true) {
                     const newAdd = await ipfsClient.add(this.state.buffer)
                     newImg = `https://ipfs.infura.io/ipfs/${newAdd.path}`
                     this.setState({ buffer: null, imgChg: false })
                   }
-                  this.props.editProperty(id+1, newTitle, newDesc, newValue, pendSale, newImg)
+                  this.props.editProperty(pid+1, newTitle, newDesc, newValue, salePercent, newImg)
                 }}>
                   <div className="form-group mr-sm-2">
                     <input
@@ -218,7 +254,8 @@ class MyProperty extends Component {
                       id="pImg"
                       type="file"
                       onChange={this.captureFile}
-                      className="form-control" />
+                      className="form-control"
+                    />
                   </div>
                   <p />
                   <big>For Sale?</big>
@@ -231,6 +268,15 @@ class MyProperty extends Component {
                       <input className="form-check-input" type="radio" name="choice" value="no" id="choice-no" />
                       <label className="form-check-label" htmlFor="choice-no">No</label>
                     </div>
+                  </div>
+                  <div className="form-group mr-sm-2">
+                    <input
+                      id="pPerc"
+                      type="text"
+                      ref={(input) => { this.pPerc = input }}
+                      className="form-control"
+                      placeholder="Percentage to Sell" 
+                    />
                   </div>
                   <p />
                   <button type="submit" className="btn btn-primary">Save Changes</button>

@@ -21,11 +21,17 @@ class Sell extends Component {
             </thead>
             <tbody id="offers">
               { this.props.offers.map((offer, key) => {
-                if (this.props.property[offer.propID-1].propOwner === this.props.account) {
+                if (offer.stakeOwner === this.props.account && offer.currState === "0") {
+                  var val = 0
+                  this.props.escrows.map((escrow, idx) => {
+                    if (escrow.stakeOwner === offer.stakeOwner) {
+                      val = escrow.value * (escrow.salePercent/100)
+                    }
+                  })
                   return (
                     <tr key={key}>
                       <th scope="row">{offer.propID.toString()}</th>
-                      <td>${window.web3.utils.fromWei(this.props.property[offer.propID-1].propValue.toString(), 'Ether')*this.props.ethToDollars}</td>
+                      <td>${window.web3.utils.fromWei(val.toString(), 'Ether')*this.props.ethToDollars}</td>
                       <td>${window.web3.utils.fromWei(offer.amount.toString(), 'Ether')*this.props.ethToDollars}</td>
                       <td><button type="submit" className="btn btn-warning" 
                         name={offer.propID}
@@ -60,7 +66,7 @@ class Sell extends Component {
             <tbody id="escrows">
               {this.props.escrows.map((escrow, key) => {
                 const status = ['NONE', 'AWAITING_PAYMENT', 'AWAITING_TRANSFER', 'COMPLETE']
-                if (escrow.currState !== "0" && escrow.currState !== "3" && escrow.propOwner === this.props.account) {
+                if (escrow.currState !== "0" && escrow.currState !== "3" && escrow.stakeOwner === this.props.account) {
                   return (
                     <tr key={key}>
                       <th scope="row">{escrow.propID.toString()}</th>
@@ -69,8 +75,8 @@ class Sell extends Component {
                       <td><button type="submit" className="btn btn-outline-primary"
                         name={escrow.propID}
                         onClick={(event) => {
-                          this.props.cancelEscrow(event.target.name)
-                      }}>Cancel Escrow</button></td>
+                          this.props.cancelDeal(event.target.name)
+                      }}>Cancel Deal</button></td>
                     </tr>
                   )
                 }

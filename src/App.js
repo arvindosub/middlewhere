@@ -38,7 +38,7 @@ class App extends Component {
       //load all property
       const propertyCount = await marketplace.methods.totalPropertyCounter().call()
       this.setState({ propertyCount })
-      for (var i=1; i <= propertyCount; i++) {
+      for (var i=1; i<=propertyCount; i++) {
         const property = await marketplace.methods.allProperty(i).call()
         this.setState({ property: [...this.state.property, property] })
       }
@@ -48,7 +48,7 @@ class App extends Component {
       //load all offers
       for (var a=1; a <= propertyCount; a++) {
         var offerCount = await marketplace.methods.offerCounts(a).call()
-        for (var b=0; b < offerCount; b++) {
+        for (var b=0; b<offerCount; b++) {
           const offer = await marketplace.methods.allOffers(a,b).call()
           this.setState({ offers: [...this.state.offers, offer] })
         }
@@ -57,13 +57,17 @@ class App extends Component {
       console.log(this.state.offers)
 
       //load all escrows
-      for (var j=1; j <= propertyCount; j++) {
-        const escrow = await marketplace.methods.allEscrows(j).call()
-        this.setState({ escrows: [...this.state.escrows, escrow] })
+      for (var j=1; j<=propertyCount; j++) {
+        const escrowCount = await marketplace.methods.escrowCounts(j).call()
+        for (var k=0; k<escrowCount; k++) {
+          const escrow = await marketplace.methods.allEscrows(j,k).call()
+          this.setState({ escrows: [...this.state.escrows, escrow] })
+        }
       }
       console.log('All Escrows')
       console.log(this.state.escrows)
 
+      /*
       //load all loans
       const loansCount = await marketplace.methods.totalLoansCounter().call()
       this.setState({ loansCount })
@@ -92,6 +96,7 @@ class App extends Component {
       }
       console.log('All Loan Escrows')
       console.log(this.state.loanEscrows)
+      */
 
       this.setState({ loading: false })
 
@@ -108,10 +113,10 @@ class App extends Component {
       property: [],
       escrows: [],
       offers: [],
-      loansCount: 0,
-      loans: [],
-      loanEscrows: [],
-      loanOffers: [],
+      //loansCount: 0,
+      //loans: [],
+      //loanEscrows: [],
+      //loanOffers: [],
       loading: true
     }
     this.addProperty = this.addProperty.bind(this)
@@ -120,8 +125,9 @@ class App extends Component {
     this.acceptOffer = this.acceptOffer.bind(this)
     this.rejectOffer = this.rejectOffer.bind(this)
     this.cancelOffer = this.cancelOffer.bind(this)
-    this.cancelEscrow = this.cancelEscrow.bind(this)
+    this.cancelDeal = this.cancelDeal.bind(this)
     this.purchaseProperty = this.purchaseProperty.bind(this)
+    /*
     this.applyLoan = this.applyLoan.bind(this)
     this.cancelLoan = this.cancelLoan.bind(this)
     this.offerLoan = this.offerLoan.bind(this)
@@ -129,27 +135,28 @@ class App extends Component {
     this.disburseLoan = this.disburseLoan.bind(this)
     this.rejectLoan = this.rejectLoan.bind(this)
     this.payMortgage = this.payMortgage.bind(this)
+    */
   }
 
-  addProperty(propTitle, propAddress, propDescription, propValue, imgURL) {
+  addProperty(propTitle, propAddress, propDescription, percentage, value, imgURL) {
     this.setState({ loading: true })
-    this.state.marketplace.methods.addProperty(propTitle, propAddress, propDescription, propValue, imgURL).send({ from: this.state.account }).once('receipt', (receipt) => {
+    this.state.marketplace.methods.addProperty(propTitle, propAddress, propDescription, percentage, value, imgURL).send({ from: this.state.account }).once('receipt', (receipt) => {
       this.setState({ loading: false })
       window.location.reload()
     })
   }
 
-  editProperty(propID, propTitle, propDescription, propValue, pendingSale, imgURL) {
+  editProperty(propID, propTitle, propDescription, value, salePercent, imgURL) {
     this.setState({ loading: true })
-    this.state.marketplace.methods.editProperty(propID, propTitle, propDescription, propValue, pendingSale, imgURL).send({ from: this.state.account }).once('receipt', (receipt) => {
+    this.state.marketplace.methods.editProperty(propID, propTitle, propDescription, value, salePercent, imgURL).send({ from: this.state.account }).once('receipt', (receipt) => {
       this.setState({ loading: false })
       window.location.reload()
     })
   }
 
-  makeOffer(propID, amount) {
+  makeOffer(propID, amount, stakeOwner) {
     this.setState({ loading: true })
-    this.state.marketplace.methods.makeOffer(propID, amount).send({ from: this.state.account }).once('receipt', (receipt) => {
+    this.state.marketplace.methods.makeOffer(propID, amount, stakeOwner).send({ from: this.state.account }).once('receipt', (receipt) => {
       this.setState({ loading: false })
       window.location.reload()
     })
@@ -171,17 +178,17 @@ class App extends Component {
     })
   }
 
-  cancelOffer(propID) {
+  cancelOffer(propID, stakeOwner) {
     this.setState({ loading: true })
-    this.state.marketplace.methods.cancelOffer(propID).send({ from: this.state.account }).once('receipt', (receipt) => {
+    this.state.marketplace.methods.cancelOffer(propID, stakeOwner).send({ from: this.state.account }).once('receipt', (receipt) => {
       this.setState({ loading: false })
       window.location.reload()
     })
   }
 
-  cancelEscrow(propID) {
+  cancelDeal(propID) {
     this.setState({ loading: true })
-    this.state.marketplace.methods.cancelEscrow(propID).send({ from: this.state.account }).once('receipt', (receipt) => {
+    this.state.marketplace.methods.cancelDeal(propID).send({ from: this.state.account }).once('receipt', (receipt) => {
       this.setState({ loading: false })
       window.location.reload()
     })
@@ -195,6 +202,7 @@ class App extends Component {
     })
   }
 
+  /*
   applyLoan(propID, amount, duration) {
     this.setState({ loading: true })
     this.state.marketplace.methods.applyLoan(propID, amount, duration).send({ from: this.state.account }).once('receipt', (receipt) => {
@@ -250,6 +258,7 @@ class App extends Component {
       window.location.reload()
     })
   }
+  */
 
   render() {
     return (
@@ -263,9 +272,9 @@ class App extends Component {
               property={this.state.property} 
               offers={this.state.offers} 
               escrows={this.state.escrows}
-              loans={this.state.loans}
-              loanOffers={this.state.loanOffers}
-              loanEscrows={this.state.loanEscrows} 
+              //loans={this.state.loans}
+              //loanOffers={this.state.loanOffers}
+              //loanEscrows={this.state.loanEscrows} 
               ethToDollars={100000}
               addProperty={this.addProperty}
               editProperty={this.editProperty}
@@ -276,9 +285,9 @@ class App extends Component {
               property={this.state.property} 
               offers={this.state.offers} 
               escrows={this.state.escrows}
-              loans={this.state.loans}
-              loanOffers={this.state.loanOffers}
-              loanEscrows={this.state.loanEscrows} 
+              //loans={this.state.loans}
+              //loanOffers={this.state.loanOffers}
+              //loanEscrows={this.state.loanEscrows} 
               ethToDollars={100000}
               makeOffer={this.makeOffer} />} 
             />
@@ -287,45 +296,47 @@ class App extends Component {
               property={this.state.property} 
               offers={this.state.offers} 
               escrows={this.state.escrows} 
-              loans={this.state.loans}
-              loanOffers={this.state.loanOffers}
-              loanEscrows={this.state.loanEscrows} 
+              //loans={this.state.loans}
+              //loanOffers={this.state.loanOffers}
+              //loanEscrows={this.state.loanEscrows} 
               ethToDollars={100000}
               cancelOffer={this.cancelOffer}
               purchaseProperty={this.purchaseProperty}
-              applyLoan={this.applyLoan} />} 
+              //applyLoan={this.applyLoan}
+               />} 
             />
             <Route path="/sell" exact component={() => <Sell 
               account={this.state.account}
               property={this.state.property} 
               offers={this.state.offers} 
               escrows={this.state.escrows} 
-              loans={this.state.loans}
-              loanOffers={this.state.loanOffers}
-              loanEscrows={this.state.loanEscrows} 
+              //loans={this.state.loans}
+              //loanOffers={this.state.loanOffers}
+              //loanEscrows={this.state.loanEscrows} 
               ethToDollars={100000}
               acceptOffer={this.acceptOffer}
               rejectOffer={this.rejectOffer}
-              cancelEscrow={this.cancelEscrow} />} 
+              cancelDeal={this.cancelDeal} />} 
             />
             <Route path="/loans" exact component={() => <LoanPortal 
               account={this.state.account}
               property={this.state.property} 
               offers={this.state.offers} 
               escrows={this.state.escrows} 
-              loans={this.state.loans}
-              loanOffers={this.state.loanOffers}
-              loanEscrows={this.state.loanEscrows} 
+              //loans={this.state.loans}
+              //loanOffers={this.state.loanOffers}
+              //loanEscrows={this.state.loanEscrows} 
               ethToDollars={100000}
               acceptOffer={this.acceptOffer}
               rejectOffer={this.rejectOffer}
-              cancelEscrow={this.cancelEscrow}
-              cancelLoan={this.cancelLoan}
-              offerLoan={this.offerLoan}
-              acceptLoan={this.acceptLoan}
-              disburseLoan={this.disburseLoan}
-              rejectLoan={this.rejectLoan}
-              payMortgage={this.payMortgage} />} 
+              cancelDeal={this.cancelDeal}
+              //cancelLoan={this.cancelLoan}
+              //offerLoan={this.offerLoan}
+              //acceptLoan={this.acceptLoan}
+              //disburseLoan={this.disburseLoan}
+              //rejectLoan={this.rejectLoan}
+              //payMortgage={this.payMortgage}
+               />} 
             />
           </Switch>
           <Footer />
