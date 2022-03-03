@@ -178,12 +178,10 @@ contract Marketplace {
     }
 
     //For buyers to complete the sale after their offer is accepted by the seller
-    function purchaseProperty(uint _propID) public {
-        (, , , uint amt, address payable own, address payable buy, uint sale, ) = propsContract.findPropEscrow(_propID, msg.sender);
+    function purchaseProperty(uint _propID, address payable _stakeOwner) public {
+        (, , , uint amt, , address payable _buyer, uint sale, ) = propsContract.findPropEscrow(_propID, _stakeOwner);
         require(propsContract.checkBalance(msg.sender) >= amt, "Insufficient funds!");
         //make payment
-        address payable _stakeOwner = own;
-        address payable _buyer = buy;
         require(_buyer == msg.sender, "You are not the buyer!");
         propsContract.transferMWT(_buyer, _stakeOwner, amt);
         //transfer property

@@ -70,7 +70,8 @@ class Buy extends Component {
                         name={escrow.propID}
                         value={escrow.amount}
                         onClick={(event) => {
-                          this.props.purchaseProperty(event.target.name)
+                          console.log(escrow.amount)
+                          this.props.purchaseProperty(event.target.name, escrow.stakeOwner)
                       }}>Make Payment</button></td>
                       <td>
                         <form onSubmit={(event) => {

@@ -184,7 +184,7 @@ class MyProperty extends Component {
                   for (const rb of rbs) {
                     if (rb.checked) {
                       if (rb.value == "yes") {
-                        salePercent = this.pPerc.value
+                        salePercent = this.props.pescrows[idx].percentage * this.pPerc.value / 100
                       } else if (rb.value == "no") {
                         salePercent = 0
                       }
@@ -277,7 +277,7 @@ class MyProperty extends Component {
                       type="text"
                       ref={(input) => { this.pPerc = input }}
                       className="form-control"
-                      placeholder="Percentage to Sell" 
+                      placeholder="% of Owned Stake to Sell" 
                     />
                   </div>
                   <p />

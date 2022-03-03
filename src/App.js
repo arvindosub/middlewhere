@@ -246,9 +246,9 @@ class App extends Component {
     })
   }
 
-  purchaseProperty(propID) {
+  purchaseProperty(propID, buyer) {
     this.setState({ loading: true })
-    this.state.mwMarket.methods.purchaseProperty(propID).send({ from: this.state.account }).once('receipt', (receipt) => {
+    this.state.mwMarket.methods.purchaseProperty(propID, buyer).send({ from: this.state.account }).once('receipt', (receipt) => {
       this.setState({ loading: false })
       window.location.reload()
     })

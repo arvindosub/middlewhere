@@ -214,14 +214,15 @@ contract Props {
         if (myEscrow.salePercent == 100) {
             myEscrow.stakeOwner = myEscrow.buyer;
             myEscrow.value = myEscrow.amount;
-            myEscrow.currState = PropEscrowState.COMPLETE;
+            myEscrow.currState = PropEscrowState.NONE;
             myEscrow.salePercent = 0;
             allPropEscrows[_propID][index] = myEscrow;
         } else {
             addPropEscrow(_propID, myEscrow.salePercent, myEscrow.amount, _to, _to);
-            myEscrow.value = (myEscrow.amount / myEscrow.salePercent) * (myEscrow.percentage - myEscrow.salePercent);
+            myEscrow.value = myEscrow.value - myEscrow.amount;
+            myEscrow.amount = myEscrow.value;
             myEscrow.percentage = myEscrow.percentage - myEscrow.salePercent;
-            myEscrow.currState = PropEscrowState.COMPLETE;
+            myEscrow.currState = PropEscrowState.NONE;
             myEscrow.buyer = myEscrow.stakeOwner;
             myEscrow.salePercent = 0;
             allPropEscrows[_propID][index] = myEscrow;

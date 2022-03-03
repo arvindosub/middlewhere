@@ -61,7 +61,7 @@ class Listings extends Component {
                   img = property.imgURL
                   tit = property.propTitle
                   des = property.propDescription
-                  val = escrow.value * (escrow.salePercent/100)
+                  val = escrow.value * (escrow.salePercent / escrow.percentage)
                   ind = idx
                   pid = property.propID
                 }
@@ -100,7 +100,7 @@ class Listings extends Component {
                   img = property.imgURL
                   tit = property.propTitle
                   des = property.propDescription
-                  val = escrow.value * (escrow.salePercent/100)
+                  val = escrow.value * (escrow.salePercent / escrow.percentage)
                   ind = idx
                 }
               })
