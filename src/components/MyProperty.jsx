@@ -42,7 +42,7 @@ class MyProperty extends Component {
               </tr>
             </thead>
             <tbody id="propList">
-              { this.props.escrows.map((escrow, key) => {
+              { this.props.pescrows.map((escrow, key) => {
                 var value = 0
                 var perc = 0
                 var sale = 0
@@ -66,7 +66,7 @@ class MyProperty extends Component {
                     <tr key={pid}>
                       <th scope="row">{pid.toString()}</th>
                       <td style={{ textAlign: 'left' }}><img src={imgurl} className="img-thumbnail" style={{ maxWidth: '100px', marginRight: "30px", marginLeft: "0px", marginTop: "0px" }} />{title}</td>
-                      <td>${window.web3.utils.fromWei(value.toString(), 'Ether')*this.props.ethToDollars}</td>
+                      <td>${value.toString()}</td>
                       <td>{description}</td>
                       <td>{perc.toString()}</td>
                       <td>{sale > 0 ? 'On Sale: ' + sale.toString() + '%' : 'Not For Sale' }</td>
@@ -95,8 +95,9 @@ class MyProperty extends Component {
                     const title = this.tit.value
                     const address = this.add.value
                     const percentage = parseInt(this.perc.value)
-                    let ethValue = this.val.value / this.props.ethToDollars
-                    const value = window.web3.utils.toWei(ethValue.toString(), 'Ether')
+                    //let ethValue = this.val.value / this.props.ethToDollars
+                    //const value = window.web3.utils.toWei(ethValue.toString(), 'Ether')
+                    const value = this.val.value
                     const description = this.desc.value
                     this.props.addProperty(title, address, description, percentage, value, imgURL)
                   }}>
@@ -131,7 +132,7 @@ class MyProperty extends Component {
                   </div>
                   <div className="form-group mr-sm-2">
                     <input
-                      id="val"
+                      id="perc"
                       type="text"
                       ref={(input) => { this.perc = input }}
                       className="form-control"
@@ -173,13 +174,13 @@ class MyProperty extends Component {
                   event.preventDefault()
                   var pid = this.pID.value-1
                   var idx = 0
-                  this.props.escrows.map((escrow, index) => {
+                  this.props.pescrows.map((escrow, index) => {
                     if (escrow.propID == pid+1 && escrow.stakeOwner == this.props.account) {
                       idx = index
                     }
                   })
                   const rbs = document.querySelectorAll('input[name="choice"]');
-                  var salePercent = this.props.escrows[idx].salePercent
+                  var salePercent = this.props.pescrows[idx].salePercent
                   for (const rb of rbs) {
                     if (rb.checked) {
                       if (rb.value == "yes") {
@@ -194,9 +195,10 @@ class MyProperty extends Component {
                   if (this.pTitle.value === null || this.pTitle.value === '') {
                     newTitle = this.props.property[pid].propTitle
                   }
-                  var newValue = window.web3.utils.toWei((this.pValue.value/this.props.ethToDollars).toString(), 'Ether')
+                  //var newValue = window.web3.utils.toWei((this.pValue.value/this.props.ethToDollars).toString(), 'Ether')
+                  var newValue = this.pValue.value
                   if (this.pValue.value === null || this.pValue.value === '') {
-                    newValue = this.props.escrows[idx].value
+                    newValue = this.props.pescrows[idx].value
                   }
                   var newDesc = this.pDesc.value
                   if (this.pDesc.value === null || this.pDesc.value === '') {

@@ -19,10 +19,10 @@ class Buy extends Component {
               </tr>
             </thead>
             <tbody id="offers">
-              {this.props.offers.map((offer, key) => {
-                if (offer.buyer === this.props.account) {
+              {this.props.poffers.map((offer, key) => {
+                if (offer.buyer === this.props.account && offer.currState === "0") {
                   var val = 0
-                  this.props.escrows.map((escrow, idx) => {
+                  this.props.pescrows.map((escrow, idx) => {
                     if (escrow.stakeOwner === offer.stakeOwner) {
                       val = escrow.value *(escrow.salePercent/100)
                     }
@@ -30,8 +30,8 @@ class Buy extends Component {
                   return (
                     <tr key={key}>
                         <th scope="row">{offer.propID.toString()}</th>
-                        <td>${window.web3.utils.fromWei(val.toString(), 'Ether')*this.props.ethToDollars}</td>
-                        <td>${window.web3.utils.fromWei(offer.amount.toString(), 'Ether')*this.props.ethToDollars}</td>
+                        <td>${val.toString()}</td>
+                        <td>${offer.amount.toString()}</td>
                         <td><button type="submit" className="btn btn-outline-primary"
                           name={offer.propID}
                           onClick={(event) => {
@@ -58,28 +58,29 @@ class Buy extends Component {
               </tr>
             </thead>
             <tbody id="escrows">
-              {this.props.escrows.map((escrow, key) => {
+              {this.props.pescrows.map((escrow, key) => {
                 const status = ['NONE', 'AWAITING_PAYMENT', 'AWAITING_TRANSFER', 'COMPLETE']
                 if (escrow.currState !== "0" && escrow.currState !== "3" && escrow.buyer === this.props.account) {
                   return (
                     <tr key={key}>
                       <th scope="row">{escrow.propID.toString()}</th>
-                      <td>${window.web3.utils.fromWei(escrow.amount.toString(), 'Ether')*this.props.ethToDollars}</td>
+                      <td>${escrow.amount.toString()}</td>
                       <td>{status[escrow.currState]}</td>
                       <td><button type="submit" className="btn btn-warning" 
                         name={escrow.propID}
                         value={escrow.amount}
                         onClick={(event) => {
-                          this.props.purchaseProperty(event.target.name, event.target.value)
+                          this.props.purchaseProperty(event.target.name)
                       }}>Make Payment</button></td>
                       <td>
                         <form onSubmit={(event) => {
                           event.preventDefault()
-                          let ethval = this.amt.value / this.props.ethToDollars
-                          const myamt = window.web3.utils.toWei(ethval.toString(), 'Ether')
+                          //let ethval = this.amt.value
+                          //const myamt = window.web3.utils.toWei(ethval.toString(), 'Ether')
+                          const myamt = this.amt.value.toString()
                           const myid = escrow.propID
                           const mydur = this.dur.value
-                          this.props.applyLoan(myid, myamt, mydur)
+                          this.props.createLoan(myid, myamt, mydur)
                           }}>
                           <div className="form-group mr-sm-2">
                             <input

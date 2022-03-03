@@ -1,19 +1,15 @@
 pragma solidity ^0.5.0;
+import "./Props.sol";
+import "./Loans.sol";
 
 contract Marketplace {
 
-    address public admin;
-    uint public totalPropertyCounter = 0;
-    enum State {NONE, AWAITING_PAYMENT, AWAITING_TRANSFER, COMPLETE}
-    struct Property {
-        uint propID;
-        string propTitle;
-        string propAddress;
-        string propDescription;
-        string imgURL;
-        uint accounted;
-    }
-    struct Escrow {
+    Props propsContract;
+    Loans loansContract;
+    uint256 commissionFee;
+    address _owner = msg.sender;
+    enum PropEscrowState {NONE, AWAITING_PAYMENT, AWAITING_TRANSFER, COMPLETE}
+    struct PropEscrow {
         uint propID;
         uint percentage;
         uint value;
@@ -21,340 +17,178 @@ contract Marketplace {
         address payable stakeOwner;
         address payable buyer;
         uint salePercent;
-        State currState;
+        PropEscrowState currState;
     }
-    struct Offer {
+    enum PropOfferState {NONE, IN_PROCESS}
+    struct PropOffer {
         uint propID;
         uint percentage;
         uint amount;
         address payable stakeOwner;
         address payable buyer;
-        State currState;
+        PropOfferState currState;
     }
-    mapping(uint => Property) public allProperty;
-    mapping(uint => Offer[]) public allOffers;
-    mapping(uint => uint) public offerCounts;
-    mapping(uint => Escrow[]) public allEscrows;
-    mapping(uint => uint) public escrowCounts;
+    
+    enum loanState {NONE, APPLIED, IN_FORCE, COMPLETE}
+    struct Loan {
+        uint loanID;
+        uint propID;
+        address payable buyer;
+        address payable provider;
+        uint amount;
+        uint duration;
+        uint balamount;
+        uint balduration;
+        loanState currState;
+    }
+    enum loanEscrowState {NONE, ACCEPTED, DISBURSED, COMPLETE}
+    struct LoanEscrow {
+        uint loanID;
+        address payable buyer;
+        address payable provider;
+        uint amount;
+        uint duration;
+        loanEscrowState currState;
+    }
+    struct LoanOffer {
+        uint loanID;
+        address payable buyer;
+        address payable provider;
+        uint amount;
+        uint duration;
+    }
 
-    event CreatedProperty(uint _propID, string _propTitle, string _propAddress, string _propDescription, string _imgURL, uint _accounted);
-    event CreatedEscrow(uint _propID, uint _percentage, uint _value, uint _amount, address payable _propOwner, address payable _buyer, uint _salePercent, State _currState);
-    event CreatedOffer(uint _propID, uint _percentage, uint _amount, address payable _stakeOwner, address payable _buyer, State _currState);
+    mapping(uint => PropOffer[]) public allPropOffers;
+    mapping(uint => uint) public countPropOffers;
+    mapping(uint => LoanOffer[]) public allLoanOffers;
+    mapping(uint => uint) public countLoanOffers;
+
+    event CreatedPropOffer(uint _propID, uint _percentage, uint _amount, address payable _stakeOwner, address payable _buyer, PropOfferState _currState);
     event PurchasedStake(uint _propID, uint _percentage, uint _amount, address payable _stakeOwner);
-    
-    constructor() public {
-       //The admin account is used to deploy the contract.
-       admin = msg.sender;
+
+    constructor (Props propsAddress, Loans loansAddress, uint256 fee) public {
+        propsContract = propsAddress;
+        loansContract = loansAddress;
+        commissionFee = fee;
     }
 
-    modifier isAdmin {
-        require(msg.sender == admin, "You are not authorised to add property!");
-        _;
-    }
-
-    modifier checkPayment(uint _propID) {
-        uint index;
-        for(uint i=0; i<allEscrows[_propID].length; i++) {
-            if(allEscrows[_propID][i].stakeOwner == msg.sender) {
-                index = i;
-                break;
-            }
-        }
-        require(_propID > 0 && _propID <= totalPropertyCounter, "Property ID is invalid");
-        require(allEscrows[_propID][index].buyer == msg.sender, "You are not the buyer!");
-        require(allEscrows[_propID][index].currState == State.AWAITING_PAYMENT, "Payment already made!");
-        _;
-    }
-
-    function addEscrow(uint _propID, uint _percentage, uint _value) public {
-        Escrow memory nullEscrow = Escrow({
-            propID: _propID,
-            percentage: _percentage,
-            value: _value,
-            amount: _value,
-            stakeOwner: msg.sender,
-            buyer: msg.sender,
-            salePercent: 0,
-            currState: State.NONE
-        });
-        allEscrows[_propID].push(nullEscrow);
-        escrowCounts[_propID]++;
-        emit CreatedEscrow(_propID, _percentage, _value, _value, msg.sender, msg.sender, 0, State.NONE);
-    }
-
-    function addProperty(string memory _propTitle, string memory _propAddress, string memory _propDescription, uint _percentage, uint _value, string memory _imgURL) public {
-        require(bytes(_propAddress).length > 0);
-
-        // Check if unique property and/or all owners are registered
-        bool isUnique = true;
-        uint percentAcc = 0;
-        uint propID = 0;
-        if(totalPropertyCounter > 0) {
-            for(uint i=1; i<=totalPropertyCounter; i++) {
-                if (keccak256(abi.encodePacked(allProperty[i].propAddress)) == keccak256(abi.encodePacked(_propAddress))) {
-                    isUnique = false;
-                    propID = i;
-                    percentAcc = allProperty[i].accounted + _percentage;
-                    if (allProperty[i].accounted == 100) {
-                        revert("This property is already registered and fully accounted for!");
-                    } else if (percentAcc > 100) {
-                        revert("Stake size claimed is too large!");
-                    }
-                    break;
-                }
-            }
-        }
-        // Create new property if unique
-        if (isUnique == true) {
-            require(_value > 0);
-            totalPropertyCounter = totalPropertyCounter + 1;
-            escrowCounts[totalPropertyCounter] = 0;
-            offerCounts[totalPropertyCounter] = 0;
-            
-            Property memory myProperty = Property({
-                propID: totalPropertyCounter,
-                propTitle: _propTitle,
-                propAddress: _propAddress,
-                propDescription: _propDescription,
-                imgURL: _imgURL,
-                accounted: _percentage
-            });
-
-            allProperty[totalPropertyCounter] = myProperty;
-            emit CreatedProperty(totalPropertyCounter, _propTitle, _propAddress, _propDescription, _imgURL, _percentage);
-            // Add stake for person first adding the property
-            addEscrow(totalPropertyCounter, _percentage, _value);
-
-        } else {
-            // Only need to add new stake owner as property already exists. Need to update accounted percentage of property.
-            addEscrow(propID, _percentage, _value);
-            allProperty[propID].accounted = percentAcc;
-        }
-    }
-
-    function editProperty(uint _propID, string memory _propTitle, string memory _propDescription, uint _value, uint _salePercent, string memory _imgURL) public {
-        uint index;
-        for(uint i=0; i<allEscrows[_propID].length; i++) {
-            if(allEscrows[_propID][i].stakeOwner == msg.sender) {
-                index = i;
-                break;
-            }
-        }
-        require(index >= 0, "You are not the owner!");
-        Escrow memory myEscrow = allEscrows[_propID][index];
-        require(myEscrow.currState == State.NONE || myEscrow.currState == State.COMPLETE, "There is an ongoing transaction!");
-
-        allProperty[_propID].propTitle = _propTitle;
-        allProperty[_propID].propDescription = _propDescription;
-        allProperty[_propID].imgURL = _imgURL;
-        myEscrow.value = _value;
-        if (myEscrow.salePercent != _salePercent) {
-            myEscrow.salePercent = _salePercent;
-            if (_salePercent > 0) {
-                myEscrow.currState = State.NONE;
-            } else {
-                myEscrow.currState = State.COMPLETE;
-            }
-        }
-        allEscrows[_propID][index] = myEscrow;
-    }
-    
-    function getPropertyDetails(uint _propID) public view returns (uint, string memory, string memory, string memory, string memory) {
-        return (allProperty[_propID].propID,
-            allProperty[_propID].propTitle, 
-            allProperty[_propID].propAddress,
-            allProperty[_propID].propDescription,
-            allProperty[_propID].imgURL);
-    }
-
-    function getOwnersPropertyCount() public view returns (uint) {
-        uint propCount = 0;
-        for(uint i=1; i<=totalPropertyCounter; i++) {
-            for(uint j=0; j<allEscrows[i].length; j++) {
-                if(allEscrows[i][j].stakeOwner == msg.sender) {
-                    propCount++;
-                    break;
-                }
-            }
-        }
-        return propCount;
-    }
-
+    //For potential buyers to make offers
     function makeOffer(uint _propID, uint _amount, address payable _stakeOwner) public {
-        uint index;
-        for(uint i=0; i<allEscrows[_propID].length; i++) {
-            if(allEscrows[_propID][i].stakeOwner == _stakeOwner) {
-                index = i;
-                break;
-            }
-        }
-        Escrow memory myEscrow = allEscrows[_propID][index];
-        require(myEscrow.salePercent > 0, "That property is not for sale. Please edit it's status.");
-        require(msg.sender != myEscrow.stakeOwner, 'You are the property owner!');
+
+        ( , , , , address payable own, , uint sale, ) = propsContract.findPropEscrow(_propID, _stakeOwner);
+
+        require(sale > 0, "That property is not for sale.");
+        require(msg.sender != own, 'You are the property owner!');
         require(_amount > 0, 'Enter a valid offer value!');
 
-        uint _percentage = myEscrow.salePercent;
-
-        Offer memory myOffer = Offer({
+        PropOffer memory myOffer = PropOffer({
             propID: _propID,
-            percentage: _percentage,
+            percentage: sale,
             amount: _amount,
             stakeOwner: _stakeOwner,
             buyer: msg.sender,
-            currState: State.NONE
+            currState: PropOfferState.NONE
         });
-        allOffers[_propID].push(myOffer);
-        offerCounts[_propID]++;
-        emit CreatedOffer(_propID, _percentage, _amount, _stakeOwner, msg.sender, State.NONE);
+        allPropOffers[_propID].push(myOffer);
+        countPropOffers[_propID]++;
+
+        emit CreatedPropOffer(_propID, sale, _amount, _stakeOwner, msg.sender, PropOfferState.NONE);
     }
 
+    //For sellers to accept the offer of their choice
     function acceptOffer(uint _propID, address payable _buyer) public {
-        uint indexE;
-        for(uint i=0; i<allEscrows[_propID].length; i++) {
-            if(allEscrows[_propID][i].stakeOwner == msg.sender) {
-                indexE = i;
-                break;
-            }
-        }
-        require(indexE >= 0, "You are not the owner!");
-        Escrow memory myEscrow = allEscrows[_propID][indexE];
-        require(myEscrow.currState == State.NONE);
+
+        ( , , , , , , , uint stat) = propsContract.findPropEscrow(_propID, msg.sender);
+        require(stat == 0);
         require(_buyer != msg.sender, "You cannot accept your own offer!");
-        uint indexO;
-        for(uint i=0; i<allOffers[_propID].length; i++) {
-            if(allOffers[_propID][i].buyer == _buyer) {
-                indexO = i;
+
+        uint index;
+        for(uint i=0; i<allPropOffers[_propID].length; i++) {
+            if(allPropOffers[_propID][i].buyer == _buyer) {
+                index = i;
                 break;
             }
         }
+        PropOffer memory myOffer = allPropOffers[_propID][index];
         // Update offer status
-        allOffers[_propID][indexO].currState = State.AWAITING_PAYMENT;
-        Offer memory acceptedOffer = allOffers[_propID][indexO];
+        allPropOffers[_propID][index].currState = PropOfferState.IN_PROCESS;
+
         // Update escrow
-        myEscrow.buyer = _buyer;
-        myEscrow.amount = acceptedOffer.amount;
-        myEscrow.currState = State.AWAITING_PAYMENT;
-        allEscrows[_propID][indexE] = myEscrow;
+        propsContract.updatePropEscrowStatus(_propID, msg.sender, _buyer, myOffer.amount, 1);
     }
 
     //For the seller to reject offers.
     function rejectOffer(uint _propID, address payable _buyer) public {
-        uint indexE;
-        for(uint i=0; i<allEscrows[_propID].length; i++) {
-            if(allEscrows[_propID][i].stakeOwner == msg.sender) {
-                indexE = i;
-                break;
-            }
-        }
-        require(indexE >= 0, "You are not the owner!");
-        require(allEscrows[_propID][indexE].buyer != _buyer, "Already accepted this offer!");
-        uint indexO;
-        for(uint i=0; i<allOffers[_propID].length; i++) {
-            if(allOffers[_propID][i].buyer == _buyer) {
-                indexO = i;
+
+        ( , , , , , address payable buy, , ) = propsContract.findPropEscrow(_propID, msg.sender);
+        require(buy != _buyer, "Already accepted this offer!");
+
+        uint index;
+        for(uint i=0; i<allPropOffers[_propID].length; i++) {
+            if(allPropOffers[_propID][i].buyer == _buyer) {
+                index = i;
                 break;
             }
         }
         //Remove offer
-        allOffers[_propID][indexO] = allOffers[_propID][(allOffers[_propID].length-1)];
-        allOffers[_propID].length--;
-        offerCounts[_propID]--;
+        allPropOffers[_propID][index] = allPropOffers[_propID][(allPropOffers[_propID].length-1)];
+        allPropOffers[_propID].length--;
+        countPropOffers[_propID]--;
     }
 
     //For the buyer to back out of offers, even if they have been accepted by seller. Must be before payment. Resets escrow.
     function cancelOffer(uint _propID, address payable _stakeOwner) public {
-        uint indexE;
-        for(uint i=0; i<allEscrows[_propID].length; i++) {
-            if(allEscrows[_propID][i].stakeOwner == _stakeOwner) {
-                indexE = i;
-                break;
-            }
-        }
-        Escrow memory myEscrow = allEscrows[_propID][indexE];
-        require(allEscrows[_propID][indexE].currState == State.NONE || allEscrows[_propID][indexE].currState == State.AWAITING_PAYMENT);
-        uint indexO;
-        for(uint i=0; i<allOffers[_propID].length; i++) {
-            if(allOffers[_propID][i].buyer == msg.sender) {
-                indexO = i;
+        ( , , uint val, , , address payable buy, uint sale, uint stat) = propsContract.findPropEscrow(_propID, _stakeOwner);
+        require(stat == 0 || stat == 1);
+
+        uint index;
+        for(uint i=0; i<allPropOffers[_propID].length; i++) {
+            if(allPropOffers[_propID][i].buyer == msg.sender) {
+                index = i;
                 break;
             }
         }
         //Remove offer
-        allOffers[_propID][indexO] = allOffers[_propID][(allOffers[_propID].length-1)];
-        allOffers[_propID].length--;
-        offerCounts[_propID]--;
+        allPropOffers[_propID][index] = allPropOffers[_propID][(allPropOffers[_propID].length-1)];
+        allPropOffers[_propID].length--;
+        countPropOffers[_propID]--;
+
         //If buyer is cancelling an offer that has already been accepted by a seller.
-        if (myEscrow.currState == State.AWAITING_PAYMENT && myEscrow.buyer == msg.sender) {
+        if (stat == 1 && buy == msg.sender) {
             //Reset the fields in the escrow.
-            myEscrow.buyer = myEscrow.stakeOwner;
-            myEscrow.amount = myEscrow.value * (myEscrow.salePercent/100);
-            myEscrow.currState = State.NONE;
-            allEscrows[_propID][indexE] = myEscrow;
+            propsContract.updatePropEscrowStatus(_propID, _stakeOwner, _stakeOwner, val*(sale/100), 0);
         }
     }
 
     //For the seller to back out of offers before payment. Will not remove the related offer.
     function cancelDeal(uint _propID) public {
-        uint indexE;
-        for(uint i=0; i<allEscrows[_propID].length; i++) {
-            if(allEscrows[_propID][i].stakeOwner == msg.sender) {
-                indexE = i;
+        uint index;
+        for(uint i=0; i<allPropOffers[_propID].length; i++) {
+            if(allPropOffers[_propID][i].stakeOwner == msg.sender) {
+                index = i;
                 break;
             }
         }
-        uint indexO;
-        for(uint i=0; i<allOffers[_propID].length; i++) {
-            if(allOffers[_propID][i].stakeOwner == msg.sender) {
-                indexO = i;
-                break;
-            }
-        }
-        require(indexE >= 0, "You are not the owner!");
-        Escrow memory myEscrow = allEscrows[_propID][indexE];
-        require(myEscrow.currState == State.AWAITING_PAYMENT);
+        ( , , uint val, , , , uint sale, uint stat) = propsContract.findPropEscrow(_propID, msg.sender);
+        require(stat == 1);
         // Reset offer status
-        allOffers[_propID][indexO].currState = State.NONE;
+        allPropOffers[_propID][index].currState = PropOfferState.NONE;
         // Reset the fields in the escrow.
-        myEscrow.buyer = myEscrow.stakeOwner;
-        myEscrow.amount = myEscrow.value * (myEscrow.salePercent/100);
-        myEscrow.currState = State.NONE;
-        allEscrows[_propID][indexE] = myEscrow;
+        propsContract.updatePropEscrowStatus(_propID, msg.sender, msg.sender, val*(sale/100), 0);
     }
 
-    function purchaseProperty(uint _propID) public payable checkPayment(_propID) {
-        uint indexE;
-        for(uint i=0; i<allEscrows[_propID].length; i++) {
-            if(allEscrows[_propID][i].buyer == msg.sender) {
-                indexE = i;
-                break;
-            }
-        }
-        Escrow memory myEscrow = allEscrows[_propID][indexE];
-        require(msg.value == myEscrow.amount, "Incorrect payment amount!");
+    //For buyers to complete the sale after their offer is accepted by the seller
+    function purchaseProperty(uint _propID) public {
+        (, , , uint amt, address payable own, address payable buy, uint sale, ) = propsContract.findPropEscrow(_propID, msg.sender);
+        require(propsContract.checkBalance(msg.sender) >= amt, "Insufficient funds!");
         //make payment
-        address payable _stakeOwner = myEscrow.stakeOwner;
-        address payable _buyer = myEscrow.buyer;
-        _stakeOwner.transfer(msg.value);
-        myEscrow.currState = State.AWAITING_TRANSFER;
+        address payable _stakeOwner = own;
+        address payable _buyer = buy;
+        require(_buyer == msg.sender, "You are not the buyer!");
+        propsContract.transferMWT(_buyer, _stakeOwner, amt);
+        //transfer property
+        propsContract.transferPropEscrow(_propID, _stakeOwner, msg.sender);
 
-        //transfer property by updating escrow
-        require(myEscrow.currState == State.AWAITING_TRANSFER);
-        // if 100% transfer, just change existing escrow. else, modify existing escrow and create new one for new stakeholder.
-        if (myEscrow.salePercent == 100) {
-            myEscrow.stakeOwner = myEscrow.buyer;
-            myEscrow.value = myEscrow.amount;
-            myEscrow.currState = State.COMPLETE;
-            myEscrow.salePercent = 0;
-            allEscrows[_propID][indexE] = myEscrow;
-        } else {
-            addEscrow(_propID, myEscrow.salePercent, myEscrow.amount);
-            myEscrow.value = (myEscrow.amount / myEscrow.salePercent) * (myEscrow.percentage - myEscrow.salePercent);
-            myEscrow.percentage = myEscrow.percentage - myEscrow.salePercent;
-            myEscrow.currState = State.COMPLETE;
-            myEscrow.salePercent = 0;
-            allEscrows[_propID][indexE] = myEscrow;
-        }
-        
         //Set loan escrow status if required
         //for(uint j=0; j<totalLoansCounter; j++) {
         //    if(allLoans[j].propID == _propID) {
@@ -363,10 +197,96 @@ contract Marketplace {
         //}
 
         //Remove all offers on the property
-        for(uint i=0; i<allOffers[_propID].length; i++) {
-            allOffers[_propID].length--;
+        for(uint i=0; i<allPropOffers[_propID].length; i++) {
+            allPropOffers[_propID].length--;
         }
-        offerCounts[_propID] = 0;
-        emit PurchasedStake(_propID, allEscrows[_propID][indexE].percentage, msg.value, _buyer);
+        countPropOffers[_propID] = 0;
+        emit PurchasedStake(_propID, sale, amt, _buyer);
     }
+
+    //Loans
+    //For potential lenders to offer loans based on the requests
+    function offerLoan(uint _loanID) public {
+        ( , , address payable buyr, , uint amnt, uint durn, , , uint stat) = loansContract.findLoan(_loanID);
+        require(stat == 1, "Loan has not been applied for!");
+        require(buyr != msg.sender, "You cannot lend to yourself...");
+        LoanOffer memory myLoanOffer = LoanOffer({
+            loanID: _loanID,
+            buyer: buyr,
+            provider: msg.sender,
+            amount: amnt,
+            duration: durn
+        });
+        allLoanOffers[_loanID].push(myLoanOffer);
+        countLoanOffers[_loanID]++;
+    }
+
+    //For borrowers to accept the loan of their choice
+    function acceptLoan(uint _loanID, address payable _provider) public {
+        uint index;
+        for(uint i=0; i<countLoanOffers[_loanID]; i++) {
+            if(allLoanOffers[_loanID][i].provider == _provider) {
+                index = i;
+                break;
+            }
+        }
+        loansContract.updateLoanEscrow(_loanID, _provider, allLoanOffers[_loanID][index].amount, allLoanOffers[_loanID][index].duration, 1);
+    }
+
+    //For lenders to disburse the funds after the borrower accepts their loan offer
+    function disburseLoan(uint _loanID) public payable {
+        ( , address payable buyr, address payable prov, uint amnt, uint durn, ) = loansContract.findLoanEscrow(_loanID);
+        require(prov == msg.sender, "You are not the lender for this loan!");
+        loansContract.transferMWT(prov, buyr, amnt);
+
+        //update loan escrow
+        loansContract.updateLoanEscrow(_loanID, prov, amnt, durn, 2);
+        
+        //update loan
+        loansContract.updateLoan(_loanID, prov, 2);
+        
+        //remove all other loan offers
+        for(uint i=0; i<countLoanOffers[_loanID]; i++) {
+            allLoanOffers[_loanID].length--;
+        }
+        countLoanOffers[_loanID] = 0;  
+    }
+
+    //For borrowers to reject loan offers
+    function refuseLoan(uint _loanID, address payable _provider) public {
+        uint index;
+        for(uint i=0; i<allLoanOffers[_loanID].length; i++) {
+            if(allLoanOffers[_loanID][i].provider == _provider) {
+                index = i;
+                break;
+            }
+        }
+
+        allLoanOffers[_loanID][index] = allLoanOffers[_loanID][(allLoanOffers[_loanID].length-1)];
+        allLoanOffers[_loanID].length--;
+        countLoanOffers[_loanID]--;
+    }
+
+    //For lenders to pull out of loan offers after they have been accepted
+    function denyLoan(uint _loanID, address payable _provider) public {
+        require(_provider == msg.sender, "You are not the lender!");
+
+        uint index;
+        for(uint i=0; i<allLoanOffers[_loanID].length; i++) {
+            if(allLoanOffers[_loanID][i].provider == _provider) {
+                index = i;
+                break;
+            }
+        }
+
+        //update loan escrow
+        loansContract.updateLoanEscrow(_loanID, allLoanOffers[_loanID][index].buyer, allLoanOffers[_loanID][index].amount, allLoanOffers[_loanID][index].duration, 0);
+
+        //remove loan offer
+        allLoanOffers[_loanID][index] = allLoanOffers[_loanID][(allLoanOffers[_loanID].length-1)];
+        allLoanOffers[_loanID].length--;
+        countLoanOffers[_loanID]--;
+    
+    }
+
 }
